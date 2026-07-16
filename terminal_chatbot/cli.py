@@ -4,7 +4,7 @@ import sys
 
 from .config import list_providers, PROVIDERS
 from .bot import ChatBot, COMMANDS
-from .ui import header, prompt, tool_line, status, error, separator, status_bar, user_line, render_markdown
+from .ui import header, prompt, tool_line, status, error, separator, status_bar, user_line, render_markdown, verify_prompt
 
 
 def load_env(path=".env"):
@@ -74,7 +74,8 @@ def run_repl(bot):
 
         try:
             streaming_text = ""
-            for kind, payload in bot.run(user):
+            gen = bot.run(user)
+            for kind, payload in gen:
                 if kind == "tool":
                     name, args = payload
                     print(tool_line(name, args))
@@ -86,6 +87,12 @@ def run_repl(bot):
                         print()
                     else:
                         print(render_markdown(payload))
+                elif kind == "verify":
+                    allowed = verify_prompt(payload)
+                    try:
+                        gen.send(allowed)
+                    except StopIteration:
+                        pass
         except Exception as exc:
             print(error(f"[error: {exc}]"))
         print(status_bar(bot.provider.label, bot.provider.model))

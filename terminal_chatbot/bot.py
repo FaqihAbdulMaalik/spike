@@ -111,11 +111,9 @@ class ChatBot:
 
         if self.agent is not None:
             if hasattr(self.provider, "chat_stream"):
-                for event in self.agent.send_stream(text):
-                    yield event
+                yield from self.agent.send_stream(text)
             else:
-                for event in self.agent.send(text):
-                    yield event
+                yield from self.agent.send(text)
             return
         self.history.append({"role": "user", "content": text})
         reply = self.provider.reply(self.history)

@@ -43,6 +43,16 @@ def prompt():
     return paint("❯ ", C.CYAN)
 
 
+def verify_prompt(info):
+    tool = info.get("tool", "?")
+    desc = info.get("description", "")
+    args = info.get("args", {})
+    args_str = ", ".join(f"{k}={v}" for k, v in args.items())
+    print(paint(f"\n⚠  Allow {tool}({args_str})?", C.YELLOW))
+    print(paint(f"   {desc}", C.DIM))
+    answer = input(paint("   (y/N) ", C.YELLOW)).strip().lower()
+    return answer in ("y", "yes")
+
 def status(text):
     return paint(text, C.DIM)
 

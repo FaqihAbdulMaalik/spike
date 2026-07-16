@@ -1,6 +1,6 @@
 import json
 
-from .tools import TOOLS, execute_tool
+from .tools import TOOLS, SENSITIVE_TOOLS, execute_tool
 
 
 class Agent:
@@ -77,6 +77,15 @@ class Agent:
                         args = json.loads(call["function"]["arguments"] or "{}")
                     except json.JSONDecodeError:
                         args = {}
+                    if name in SENSITIVE_TOOLS:
+                        confirmed = yield ("verify", {"tool": name, "args": args, "description": call["function"].get("description", "")})
+                        if not confirmed:
+                            self.history.append({
+                                "role": "tool",
+                                "content": f"[tool {name} skipped: user denied verification]",
+                                "tool_call_id": call["id"],
+                            })
+                            continue
                     yield ("tool", (name, args))
                     result = execute_tool(name, args)
                     self.history.append({

@@ -12,6 +12,8 @@ import traceback
 import urllib.parse
 import urllib.request
 
+from . import memory
+
 SENSITIVE_TOOLS = {"run_code", "write_file", "send_email", "upload_file", "github_create_issue"}
 
 SYSTEM_PROMPT = (
@@ -19,9 +21,11 @@ SYSTEM_PROMPT = (
     "Always address the user as 'boss'. "
     "You can read/write files (read_file, write_file, list_dir), run and review Python code "
     "(run_code, review_code), search the web (web_search), get weather (get_weather), "
-    "fetch URLs (read_url), make HTTP requests (http_request), manage GitHub repos "
+    "fetch URLs (read_url, fetch_page), make HTTP requests (http_request), manage GitHub repos "
     "(github_get_repo, github_list_issues, github_create_issue, github_search_code), "
-    "send emails with attachments (send_email), and upload files (upload_file). "
+    "send emails with attachments (send_email), upload files (upload_file), "
+    "remember things between chats (remember, recall, forget, list_memories), "
+    "convert currency and units (convert), and get news headlines (get_news). "
     "Keep replies concise and in the user's language. "
     "When you have the answer from a tool, summarize it clearly."
 )
@@ -135,6 +139,164 @@ def calculate(expression):
         return f"[calculate error: {exc}]"
 
 
+def remember(key, value):
+    value_str = value if isinstance(value, str) else json.dumps(value)
+    return memory.remember(key, value_str)
+
+
+def recall(key):
+    return memory.recall(key)
+
+
+def forget(key):
+    return memory.forget(key)
+
+
+def list_memories():
+    return memory.list_memories()
+
+
+def clear_memory():
+    return memory.clear_memory()
+
+
+_CONVERSION_FACTORS = {
+    "length": {
+        "m": 1.0, "meter": 1.0, "meters": 1.0,
+        "km": 1000.0, "kilometer": 1000.0, "kilometers": 1000.0,
+        "cm": 0.01, "centimeter": 0.01, "centimeters": 0.01,
+        "mm": 0.001, "millimeter": 0.001, "millimeters": 0.001,
+        "ft": 0.3048, "foot": 0.3048, "feet": 0.3048,
+        "in": 0.0254, "inch": 0.0254, "inches": 0.0254,
+        "mi": 1609.344, "mile": 1609.344, "miles": 1609.344,
+    },
+    "weight": {
+        "kg": 1.0, "kilogram": 1.0, "kilograms": 1.0,
+        "g": 0.001, "gram": 0.001, "grams": 0.001,
+        "lb": 0.453592, "lbs": 0.453592, "pound": 0.453592, "pounds": 0.453592,
+        "oz": 0.0283495, "ounce": 0.0283495, "ounces": 0.0283495,
+    },
+    "volume": {
+        "l": 1.0, "liter": 1.0, "liters": 1.0, "litre": 1.0, "litres": 1.0,
+        "ml": 0.001, "milliliter": 0.001, "milliliters": 0.001,
+        "gal": 3.78541, "gallon": 3.78541, "gallons": 3.78541,
+        "qt": 0.946353, "quart": 0.946353, "quarts": 0.946353,
+        "cup": 0.236588, "cups": 0.236588,
+        "fl_oz": 0.0295735, "fl oz": 0.0295735, "fluid ounce": 0.0295735,
+    },
+}
+
+
+def _convert_temp(value, from_unit, to_unit):
+    from_lo = from_unit.lower()[:1]
+    to_lo = to_unit.lower()[:1]
+    if from_lo == "c":
+        celsius = value
+    elif from_lo == "f":
+        celsius = (value - 32) * 5 / 9
+    elif from_lo == "k":
+        celsius = value - 273.15
+    else:
+        return None
+    if to_lo == "c":
+        return celsius
+    elif to_lo == "f":
+        return celsius * 9 / 5 + 32
+    elif to_lo == "k":
+        return celsius + 273.15
+    return None
+
+
+def convert(value, from_unit, to_unit):
+    try:
+        value = float(value)
+    except (ValueError, TypeError):
+        return "[convert error: invalid numeric value]"
+    from_lower = from_unit.strip().lower()
+    to_lower = to_unit.strip().lower()
+
+    for category, factors in _CONVERSION_FACTORS.items():
+        if from_lower in factors and to_lower in factors:
+            base = value * factors[from_lower]
+            result = base / factors[to_lower]
+            return f"{value} {from_unit} = {result:.6g} {to_unit}"
+
+    if from_lower in ("c", "celsius", "f", "fahrenheit", "k", "kelvin") and \
+       to_lower in ("c", "celsius", "f", "fahrenheit", "k", "kelvin"):
+        result = _convert_temp(value, from_unit, to_unit)
+        if result is not None:
+            return f"{value} {from_unit} = {result:.6g} {to_unit}"
+
+    if from_lower in ("usd", "idr", "eur", "gbp", "jpy", "sgd", "aud", "cny", "myr", "thb", "sar", "krw", "inr", "php"):
+        if from_lower == to_lower:
+            return f"{value} {from_unit} = {value:,.4f} {to_unit}"
+        try:
+            url = f"https://api.frankfurter.app/latest?amount={value}&from={from_lower.upper()}&to={to_lower.upper()}"
+            resp = _fetch(url)
+            data = json.loads(resp)
+            rates = data.get("rates", {})
+            target = to_lower.upper()
+            if target in rates:
+                result = rates[target]
+                return f"{value} {from_unit} = {result:,.4f} {to_unit}"
+            return f"[convert error: no rate for {to_unit}]"
+        except Exception as exc:
+            return f"[currency convert error: {exc}]"
+
+    return f"[convert error: unknown units '{from_unit}' and/or '{to_unit}']"
+
+
+def fetch_page(url):
+    try:
+        html = _fetch(url)
+        title_m = re.search(r'<title[^>]*>(.*?)</title>', html, re.I | re.S)
+        title = _strip(title_m.group(1)) if title_m else ""
+
+        for tag in ("article", "main", ".content", "#content", ".post", ".entry"):
+            m = re.search(rf'<{tag}[^>]*>(.*?)</{tag}>', html, re.I | re.S)
+            if m:
+                body = _strip(m.group(1))
+                break
+        else:
+            body_m = re.search(r'<body[^>]*>(.*?)</body>', html, re.I | re.S)
+            body = _strip(body_m.group(1)) if body_m else _strip(html)
+
+        body = re.sub(r'\s+', ' ', body)[:15000]
+        out = f"Title: {title}\n\n{body}" if title else body[:15000]
+        return out.strip()
+    except Exception as exc:
+        return f"[fetch_page error: {exc}]"
+
+
+def get_news(query):
+    try:
+        url = "https://news.google.com/rss/search?q=" + urllib.parse.quote(query) + "&hl=en-US&gl=US&ceid=US:en"
+        xml = _fetch(url)
+        items = re.findall(r'<item>(.*?)</item>', xml, re.I | re.S)
+        if not items:
+            return "[get_news: no results found]"
+        out = []
+        seen = set()
+        for item in items:
+            title_m = re.search(r'<title>(.*?)</title>', item, re.I | re.S)
+            link_m = re.search(r'<link>(.*?)</link>', item, re.I | re.S)
+            if not title_m or not link_m:
+                continue
+            t = _strip(title_m.group(1))
+            l = link_m.group(1).strip()
+            if t in seen or not t:
+                continue
+            seen.add(t)
+            out.append(f"• {t}\n  {l}")
+            if len(out) >= 8:
+                break
+        if not out:
+            return "[get_news: no results found]"
+        return f"News results for '{query}':\n\n" + "\n\n".join(out)
+    except Exception as exc:
+        return f"[get_news error: {exc}]"
+
+
 TOOLS = [
     {
         "type": "function",
@@ -169,6 +331,109 @@ TOOLS = [
                     "expression": {"type": "string", "description": "Arithmetic expression"}
                 },
                 "required": ["expression"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remember",
+            "description": "Store something in long-term memory (persists between chats). Use this for user preferences, watchlist items, important facts.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string", "description": "Memory key (e.g. 'user_preferred_name', 'watchlist', 'favorite_topic')"},
+                    "value": {"type": "string", "description": "Value to remember"}
+                },
+                "required": ["key", "value"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "recall",
+            "description": "Retrieve something from long-term memory by key.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string", "description": "Memory key to look up"}
+                },
+                "required": ["key"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "forget",
+            "description": "Remove a specific item from long-term memory.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string", "description": "Memory key to remove"}
+                },
+                "required": ["key"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_memories",
+            "description": "List all stored memories with their keys and values.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "clear_memory",
+            "description": "Delete ALL stored memories.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "fetch_page",
+            "description": "Fetch a URL and return its full article text (up to 15000 chars). Better than read_url for long-form content.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "The full URL to fetch"}
+                },
+                "required": ["url"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "convert",
+            "description": "Convert between currencies or units (length, weight, volume, temperature). Supports IDR, USD, EUR, GBP, JPY, SGD, and more currencies. Supports m, km, cm, mm, ft, in, mi, kg, g, lb, oz, L, mL, gal, qt, cup, C, F, K.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "value": {"type": "number", "description": "Numeric value to convert"},
+                    "from_unit": {"type": "string", "description": "Source unit (e.g. 'USD', 'km', 'kg', 'C')"},
+                    "to_unit": {"type": "string", "description": "Target unit (e.g. 'IDR', 'mi', 'lb', 'F')"}
+                },
+                "required": ["value", "from_unit", "to_unit"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_news",
+            "description": "Get current news headlines for a query. Returns titles, URLs and snippets.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "News topic or search query (e.g. 'Indonesia economy', 'AI technology')"}
+                },
+                "required": ["query"],
             },
         },
     },
@@ -666,6 +931,14 @@ DISPATCH = {
     "web_search": lambda args: web_search(args.get("query", "")),
     "get_current_time": lambda args: get_current_time(),
     "calculate": lambda args: calculate(args.get("expression", "")),
+    "remember": lambda args: remember(args.get("key", ""), args.get("value", "")),
+    "recall": lambda args: recall(args.get("key", "")),
+    "forget": lambda args: forget(args.get("key", "")),
+    "list_memories": lambda args: list_memories(),
+    "clear_memory": lambda args: clear_memory(),
+    "fetch_page": lambda args: fetch_page(args.get("url", "")),
+    "convert": lambda args: convert(args.get("value", 0), args.get("from_unit", ""), args.get("to_unit", "")),
+    "get_news": lambda args: get_news(args.get("query", "")),
     "get_weather": lambda args: get_weather(args.get("location", "")),
     "read_url": lambda args: read_url(args.get("url", "")),
     "read_file": lambda args: read_file(args.get("path", "")),

@@ -14,12 +14,12 @@ Free to use, free to modify, free to build on.
 ### 1. Get the code
 
 ```bash
-git clone https://github.com/FaqihAbdulMaalik/veronica-agent-system.git
-cd veronica-agent-system
+git clone https://github.com/FaqihAbdulMaalik/spike.git
+cd spike
 ```
 
 > Don't have Git? Download the ZIP from
-> https://github.com/FaqihAbdulMaalik/veronica-agent-system → Code → Download ZIP
+> https://github.com/FaqihAbdulMaalik/spike → Code → Download ZIP
 
 ### 2. Requirements
 
@@ -179,11 +179,11 @@ terminal-chatbot/
 
 ### How to contribute
 
-1. **Fork** the repo: https://github.com/FaqihAbdulMaalik/veronica-agent-system
+1. **Fork** the repo: https://github.com/FaqihAbdulMaalik/spike
    → click "Fork" (top right)
 2. **Clone your fork**:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/veronica-agent-system.git
+   git clone https://github.com/YOUR_USERNAME/spike.git
    ```
 3. **Create a branch**:
    ```bash
@@ -199,7 +199,7 @@ terminal-chatbot/
    git push origin your-feature-name
    ```
 6. **Open a Pull Request** on GitHub:
-   - Go to https://github.com/FaqihAbdulMaalik/veronica-agent-system
+   - Go to https://github.com/FaqihAbdulMaalik/spike
    - Click "Pull Requests" → "New Pull Request"
    - Select your fork and branch
    - Describe your changes and submit

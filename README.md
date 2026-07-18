@@ -91,6 +91,13 @@ Exposes an OpenAI-compatible API at `POST /v1/chat/completions`.
 
 **This is an open-source project** and everyone is welcome to contribute!
 
+### How to contribute
+
+1. **Fork** the repo on GitHub
+2. Make your changes in your fork
+3. Open a **Pull Request** back to `FaqihAbdulMaalik/veronica-agent-system`
+4. Wait for review — all PRs are welcome!
+
 - **Python learners** — study the code, add new tools, improve existing ones.
   The entire project uses only the standard library — great for learning how
   things work under the hood.

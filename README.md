@@ -7,6 +7,53 @@ between chats.
 Built with **zero third-party dependencies** — only the Python standard library.
 Free to use, free to modify, free to build on.
 
+---
+
+## Quick Start
+
+### 1. Get the code
+
+```bash
+git clone https://github.com/FaqihAbdulMaalik/veronica-agent-system.git
+cd veronica-agent-system
+```
+
+> Don't have Git? Download the ZIP from
+> https://github.com/FaqihAbdulMaalik/veronica-agent-system → Code → Download ZIP
+
+### 2. Requirements
+
+**Python 3.10+** is the only requirement. No `pip install` needed — the entire
+project uses only the Python standard library.
+
+Check your Python version:
+
+```bash
+python --version   # must be 3.10 or higher
+```
+
+### 3. Get a free API key (online mode)
+
+1. Go to https://opencode.ai and sign in
+2. Copy your Zen API key
+3. Create a file called `.env` in the project folder:
+
+```bash
+echo 'OPENCODE_API_KEY="zen-...."' > .env
+```
+
+Replace `zen-....` with your actual key.
+
+### 4. Run Veronica
+
+```bash
+python -m terminal_chatbot                    # online with web + tools
+python -m terminal_chatbot --local            # offline mode (no key needed)
+python -m terminal_chatbot --list             # list providers & models
+```
+
+---
+
 ## Features
 
 - **25+ tools** — web search, file read/write/list, run & review Python code,
@@ -29,28 +76,7 @@ Free to use, free to modify, free to build on.
   markdown rendering
 - **Offline mode** — built-in rule-based replies with `--local`
 
-## Install
-
-```bash
-git clone https://github.com/FaqihAbdulMaalik/veronica-agent-system.git
-cd veronica-agent-system
-```
-
-No `pip install` needed. Python 3.10+ required (uses `ast` module features).
-
-## Run
-
-```bash
-python -m terminal_chatbot                    # online with web search
-python -m terminal_chatbot --local            # offline mode
-python -m terminal_chatbot --list             # list providers & models
-python -m terminal_chatbot -p opencode -m hy3-free
-```
-
-Get a free Zen API key at https://opencode.ai and put it in `.env`:
-```
-OPENCODE_API_KEY=zen-....
-```
+---
 
 ## Tools
 
@@ -67,6 +93,8 @@ OPENCODE_API_KEY=zen-....
 | **Network** | `http_request`, `upload_file` |
 | **Email** | `send_email` |
 
+---
+
 ## Commands
 
 ```
@@ -79,6 +107,37 @@ OPENCODE_API_KEY=zen-....
   !quit               exit
 ```
 
+---
+
+## Send Email via Gmail (send_email tool)
+
+To let Veronica send emails on your behalf, you need a **Gmail App Password**:
+
+1. Enable **2-Factor Authentication** on your Google account:
+   https://myaccount.google.com/security
+
+2. Generate an **App Password**:
+   https://myaccount.google.com/apppasswords
+   - Select "Mail" as the app and your device
+   - Copy the **16-character password** (looks like `abcd efgh ijkl mnop`)
+
+3. Add these lines to your `.env` file:
+
+```bash
+SMTP_SERVER="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="your.email@gmail.com"
+SMTP_PASS="your 16 char app password"
+EMAIL_FROM="your.email@gmail.com"
+```
+
+4. Restart Veronica. Now when you ask her to send an email, she'll use these
+   credentials. They stay in your `.env` (gitignored) — nobody else sees them.
+
+> For other email providers, change `SMTP_SERVER` and `SMTP_PORT` accordingly.
+
+---
+
 ## API Server
 
 ```bash
@@ -86,6 +145,33 @@ python server.py
 ```
 
 Exposes an OpenAI-compatible API at `POST /v1/chat/completions`.
+Useful for building a web UI or integrating with other apps.
+
+---
+
+## Project structure
+
+```
+terminal-chatbot/
+├── run.py                          # entry point
+├── server.py                       # REST API server
+├── terminal_chatbot/
+│   ├── __init__.py
+│   ├── __main__.py                 # python -m terminal_chatbot
+│   ├── agent.py                    # agentic loop (tool calling)
+│   ├── bot.py                      # chatbot logic, commands
+│   ├── cli.py                      # terminal UI, arg parser
+│   ├── config.py                   # provider configuration
+│   ├── memory.py                   # persistent JSON memory
+│   ├── tools.py                    # all 25+ tools
+│   ├── ui.py                       # terminal styling
+│   └── providers/
+│       ├── base.py                 # base provider class
+│       ├── http.py                 # HTTP provider (OpenCode Zen)
+│       └── local.py                # offline rule-based provider
+```
+
+---
 
 ## Contributing
 
@@ -93,10 +179,34 @@ Exposes an OpenAI-compatible API at `POST /v1/chat/completions`.
 
 ### How to contribute
 
-1. **Fork** the repo on GitHub
-2. Make your changes in your fork
-3. Open a **Pull Request** back to `FaqihAbdulMaalik/veronica-agent-system`
-4. Wait for review — all PRs are welcome!
+1. **Fork** the repo: https://github.com/FaqihAbdulMaalik/veronica-agent-system
+   → click "Fork" (top right)
+2. **Clone your fork**:
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/veronica-agent-system.git
+   ```
+3. **Create a branch**:
+   ```bash
+   git checkout -b your-feature-name
+   ```
+4. **Make your changes** and commit:
+   ```bash
+   git add .
+   git commit -m "Add your feature"
+   ```
+5. **Push to your fork**:
+   ```bash
+   git push origin your-feature-name
+   ```
+6. **Open a Pull Request** on GitHub:
+   - Go to https://github.com/FaqihAbdulMaalik/veronica-agent-system
+   - Click "Pull Requests" → "New Pull Request"
+   - Select your fork and branch
+   - Describe your changes and submit
+
+All PRs are reviewed and welcome!
+
+### What you can build
 
 - **Python learners** — study the code, add new tools, improve existing ones.
   The entire project uses only the standard library — great for learning how
@@ -115,6 +225,8 @@ Ideas to get started:
 - [ ] SQLite-backed memory instead of JSON
 - [ ] Plugin system for community-contributed tools
 - [ ] Voice input/output
+
+---
 
 ## License
 

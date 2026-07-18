@@ -1,8 +1,8 @@
-# Veronica AI
+# S.P.I.K.E — System for Personalized Intelligence, Knowledge & Execution
 
-An **open-source, agentic terminal chatbot** — your Python-powered AI assistant
-that runs in the terminal, calls tools autonomously, and remembers everything
-between chats.
+An **open-source, agentic terminal AI** — your Python-powered assistant that runs
+in the terminal, calls tools autonomously, remembers everything between chats,
+and acts on your behalf.
 
 Built with **zero third-party dependencies** — only the Python standard library.
 Free to use, free to modify, free to build on.
@@ -234,4 +234,6 @@ MIT — do whatever you want.
 
 ## Author
 
-Built by **faqihabdulmaalik** — a proud vibecoder. ⚡
+Built by **faqihabdulmaalik** — a proud vibecoder.
+
+**S.P.I.K.E = System for Personalized Intelligence, Knowledge & Execution** ⚡

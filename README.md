@@ -44,7 +44,7 @@ echo 'OPENCODE_API_KEY="zen-...."' > .env
 
 Replace `zen-....` with your actual key.
 
-### 4. Run Veronica
+### 4. Run Spike
 
 ```bash
 python -m terminal_chatbot                    # online with web + tools
@@ -111,7 +111,7 @@ python -m terminal_chatbot --list             # list providers & models
 
 ## Send Email via Gmail (send_email tool)
 
-To let Veronica send emails on your behalf, you need a **Gmail App Password**:
+To let Spike send emails on your behalf, you need a **Gmail App Password**:
 
 1. Enable **2-Factor Authentication** on your Google account:
    https://myaccount.google.com/security
@@ -234,6 +234,6 @@ MIT — do whatever you want.
 
 ## Author
 
-Built by **faqihabdulmaalik** — data analyst | vibecoder.
+Built by **faqihabdulmaalik** — junior data analyst | vibecode to build this 
 
 **S.P.I.K.E = System for Personalized Intelligence, Knowledge & Execution** ⚡
